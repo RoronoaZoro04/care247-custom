@@ -1,6 +1,6 @@
 <?php
 /*
-Plugin Name: care247 custom
+Plugin Name: Care247 custom
 Description: Custom PHP and Script added by Gopal
 Version: 1.0.0
 Author: Shashank Patel
@@ -11,7 +11,6 @@ License: GPL2
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
-
 
  add_action('wp_enqueue_scripts', 'care247_enqueue_assets');
 
@@ -33,8 +32,6 @@ function care247_enqueue_assets() {
         true  
     );
 }
-
-
 
 function my_pmpro_add_form_enctype() {
     ?>
@@ -135,10 +132,89 @@ add_action( 'pmpro_personal_options_update', 'my_pmpro_save_profile_file', 10, 1
 
 
 
+function my_get_visitor_country() {
+    if ( ! empty( $_GET['country'] ) ) {
+        return strtoupper( preg_replace( '/[^A-Z]/', '', $_GET['country'] ) );
+    }
+    if ( ! empty( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) {
+        return sanitize_text_field( $_SERVER['HTTP_CF_IPCOUNTRY'] );
+    }
+    $ip   = $_SERVER['REMOTE_ADDR'];
+    $resp = wp_remote_get( "https://freegeoip.app/json/{$ip}" );
+    if ( is_wp_error( $resp ) ) {
+        return 'IN';
+    }
+    $data = json_decode( wp_remote_retrieve_body( $resp ), true );
+    return ! empty( $data['country_code'] ) ? $data['country_code'] : 'IN';
+}
+
+add_filter( 'pre_option_pmpro_currency', function( $pre, $option ) {
+    if ( $option !== 'pmpro_currency' ) {
+        return $pre;
+    }
+    if ( my_get_visitor_country() !== 'IN' ) {
+        return 'USD';
+    }
+    return false; 
+}, 10, 2 );
+
+add_filter( 'pmpro_currencies', function( $currencies ) {
+    if ( empty( $currencies['USD'] ) ) {
+        $currencies['USD'] = [
+            'name'                => 'US Dollar',
+            'symbol'              => '$',
+            'position'            => 'before',
+            'decimals'            => 2,
+            'thousands_separator' => ',',
+            'decimal_separator'   => '.',
+        ];
+    }
+    return $currencies;
+}, 10 );
+
+function my_static_inr_to_usd_rate() {
+    return 1 / 1;
+}
+
+add_filter( 'pmpro_level_cost_text', function( $cost_text, $level ) {
+    $country = my_get_visitor_country();
+    $inr     = floatval( $level->initial_payment );
+    if ( $country === 'IN' ) {
+        return sprintf(
+            'The price for membership is <strong>INR %.2f per Month.</strong>',
+            $inr
+        );
+    }
+    $usd = round( $inr * my_static_inr_to_usd_rate(), 2 );
+    return sprintf(
+        'The price for membership is <strong>USD %.2f per Month.</strong>',
+        $usd
+    );
+}, 10, 2 );
+
+add_action( 'wp_head', function() {
+    if ( my_get_visitor_country() !== 'IN' && empty( $_GET['country'] ) ) {
+        $cc = my_get_visitor_country();
+        ?>
+        <script>
+        (function(){
+            var url = new URL( window.location.href );
+            url.searchParams.set( 'country', '<?php echo esc_js( $cc ); ?>' );
+            console.log(<?php echo esc_js( $cc ); ?>)
+            window.location.replace( url.toString() );
+        })();
+        </script>
+        <?php
+    }
+}, 1 );
+add_filter( 'knitpay_order_args', function( $args, $order ) {
+    if ( my_get_visitor_country() !== 'IN' ) {
+        $inr_amount = $args['amount'] / 100;
+        $usd_amount = round( $inr_amount * my_static_inr_to_usd_rate(), 2 );
+        $args['amount']   = intval( $usd_amount * 100 );
+        $args['currency'] = 'USD';
+    }
+    return $args;
+}, 10, 2 );
 
 
-
-
-
-
-	
