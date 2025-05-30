@@ -1,0 +1,30 @@
+#india,
+#not-india {
+  display: none;
+}
+
+.pmpro-profile-upload {
+  margin: 1em 0;
+}
+.pmpro-profile-upload label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+}
+.pmpro-profile-upload input[type="file"] {
+  display: block;
+}
+.pmpro-profile-upload .uploaded-file {
+  margin-top: 0.75em;
+}
+.pmpro-profile-upload .uploaded-file a {
+  color: #007cba;
+  text-decoration: none;
+  font-weight: 500;
+}
+.pmpro-profile-upload .uploaded-file a:hover {
+  text-decoration: underline;
+}
+.pmpro-profile-upload .delete-file {
+  margin-top: 0.5em;
+}
